@@ -58,8 +58,8 @@
 #include "../lib/triangulation/greedy.hh"
 #include "../lib/triangulation/quasi_greedy.hh"
 #include "../lib/navmesh/navmesh.hh"
-#include "astar.hh"
-#include "funnel.hh"
+#include "../lib/navmesh/astar.hh"
+#include "../lib/navmesh/funnel.hh"
 
 #include <algorithm>
 #include <chrono>

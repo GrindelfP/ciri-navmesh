@@ -84,7 +84,7 @@ public:
      *       This may produce non-unique triangulations for co-circular inputs
      *       but is numerically safe.
      */
-    [[nodiscard]] TriangulationResult
+    TriangulationResult
     triangulate(const std::vector<geometry::Point2D> &points,
                 geometry::DCEL &dcel) override;
 
@@ -107,8 +107,8 @@ private:
      * @return        Array of the three super-triangle vertex indices {0, 1, 2}.
      */
     std::array<geometry::VertexIdx, 3>
-    buildSuperTriangle(const std::vector<geometry::Point2D>& points,
-                       geometry::DCEL&                    dcel);
+    buildSuperTriangle(std::vector<geometry::Point2D> &points,
+                       geometry::DCEL &dcel);
 
     /**
      * @brief Inserts a single point into the current triangulation.

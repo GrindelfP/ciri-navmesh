@@ -255,7 +255,7 @@ public:
      * @pre  The triangle (pos[a], pos[b], pos[c]) is CCW (not checked here).
      * @return FaceIdx of the newly created triangle face.
      */
-    [[nodiscard]] FaceIdx addTriangle(VertexIdx a, VertexIdx b, VertexIdx c);
+    FaceIdx addTriangle(VertexIdx a, VertexIdx b, VertexIdx c);
 
     /**
      * @brief Stitches two boundary half-edges that should be twins.

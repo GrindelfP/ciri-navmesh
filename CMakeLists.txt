@@ -29,6 +29,19 @@ add_executable(test_geometry tests/test_geometry.cpp)
 target_link_libraries(test_geometry PRIVATE geometry)
 add_test(NAME geometry_tests COMMAND test_geometry)
 
-# ── Приложение (заглушка) ─────────────────────────────────────────────────────
-# add_executable(navmesh_app app/main.cpp)
-# target_link_libraries(navmesh_app PRIVATE geometry)
+# ── Приложение: navmesh_bench ─────────────────────────────────────────────────
+add_executable(navmesh_bench
+        app/main.cc
+        lib/navmesh/astar.cc
+        lib/navmesh/funnel.cc
+        lib/navmesh/navmesh.cc
+        lib/triangulation/delaunay.cc
+        lib/triangulation/greedy.cc
+        lib/triangulation/quasi_greedy.cc
+)
+
+# Добавляем пути к заголовочным файлам, чтобы CMake их видел
+target_include_directories(navmesh_bench PRIVATE app lib)
+
+# Линкуем базовую статическую библиотеку геометрии
+target_link_libraries(navmesh_bench PRIVATE geometry)

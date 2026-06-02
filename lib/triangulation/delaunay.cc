@@ -88,7 +88,7 @@ DelaunayTriangulator::triangulate(const std::vector<Point2D>& points, DCEL& dcel
 // ─────────────────────────────────────────────────────────────────────────────
 
 std::array<VertexIdx, 3>
-DelaunayTriangulator::buildSuperTriangle(std::span<const Point2D> points,
+DelaunayTriangulator::buildSuperTriangle(std::vector<geometry::Point2D>& points,
                                          DCEL&                    dcel)
 {
     // Compute axis-aligned bounding box.
