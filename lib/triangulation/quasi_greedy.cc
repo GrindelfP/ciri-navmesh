@@ -194,15 +194,35 @@ namespace triangulation {
         }
 
         // ── Phase 3: triangulate pockets ─────────────────────────────────────────
-        //
-        // The safe edges may not yet cover all triangular faces — some interior
-        // polygons (pockets) remain.  We triangulate each pocket greedily.
-
-        std::vector<Edge> allEdges = safeEdges; // start with safe edges
+        std::vector<Edge> allEdges = safeEdges;
         triangulatePockets(points, safeEdges, allEdges);
 
-        // ── Phase 4: build DCEL ───────────────────────────────────────────────────
+        // ── Phase 3.5: Fallback для гарантии полной триангуляции ─────────────────
+        // Если safeEdges несвязны, карманы могут не закрыть все пустоты.
+        // Жадно добиваем оставшиеся ребра для формирования макс. планарного графа.
+        std::vector<Edge> remainingCands;
+        const std::size_t n = points.size();
+        remainingCands.reserve(n * (n - 1) / 2);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t j = i + 1; j < n; ++j) {
+                remainingCands.push_back({i, j, points[i].distSq(points[j])});
+            }
+        }
+        std::sort(remainingCands.begin(), remainingCands.end(),
+                  [](const Edge &a, const Edge &b) { return a.lenSq < b.lenSq; });
 
+        std::unordered_set<EdgeKey, EdgeKeyHash> acceptedSet;
+        for (const auto &e: allEdges) acceptedSet.insert(makeKey(e.u, e.v));
+
+        for (const Edge &e: remainingCands) {
+            if (acceptedSet.count(makeKey(e.u, e.v))) continue;
+            if (!properlyIntersectsAny(e.u, e.v, points, allEdges)) {
+                allEdges.push_back(e);
+                acceptedSet.insert(makeKey(e.u, e.v));
+            }
+        }
+
+        // ── Phase 4: build DCEL ───────────────────────────────────────────────────
         buildDCEL(points, allEdges, dcel);
 
         // ── Phase 5: weight-reducing edge flips ───────────────────────────────────
@@ -525,6 +545,16 @@ namespace triangulation {
             return edgeSet.count(makeKey(a, b)) > 0;
         };
 
+        auto isTriangleEmpty = [&](std::size_t a, std::size_t b, std::size_t c) {
+            geometry::Triangle tri{points[a], points[b], points[c]};
+            for (std::size_t i = 0; i < n; ++i) {
+                if (i == a || i == b || i == c) continue;
+                // Если точка i лежит внутри треугольника abc, грань не атомарна
+                if (tri.contains(points[i])) return false;
+            }
+            return true;
+        };
+
         // Find all triangles (u < v < w with all three edges present).
         struct TriIdx {
             std::size_t a, b, c;
@@ -538,7 +568,10 @@ namespace triangulation {
                 for (std::size_t w: adj[u]) {
                     if (w <= v) continue;
                     if (!hasEdge(v, w)) continue;
-                    triangles.push_back({u, v, w});
+
+                    if (isTriangleEmpty(u, v, w)) {
+                        triangles.push_back({u, v, w});
+                    }
                 }
             }
         }

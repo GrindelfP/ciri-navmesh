@@ -178,21 +178,34 @@ void GreedyTriangulator::buildDCEL(const std::vector<Point2D>& points,
         return edgeSet.count({std::min(a, b), std::max(a, b)}) > 0;
     };
 
+    auto isTriangleEmpty = [&](std::size_t a, std::size_t b, std::size_t c) {
+        geometry::Triangle tri{points[a], points[b], points[c]};
+        for (std::size_t i = 0; i < n; ++i) {
+            if (i == a || i == b || i == c) continue;
+            // Если точка i лежит внутри треугольника abc, грань не атомарна
+            if (tri.contains(points[i])) return false;
+        }
+        return true;
+    };
+
     // Collect triangles, avoiding duplicates.
     // A triangle {i,j,k} with i<j<k is stored once.
-    struct TriIdx { std::size_t a, b, c; }; // indices into points[]
+    struct TriIdx {
+        std::size_t a, b, c;
+    };
     std::vector<TriIdx> triangles;
     triangles.reserve(2 * n);
 
     for (std::size_t u = 0; u < n; ++u) {
-        for (std::size_t v : adj[u]) {
-            if (v <= u) continue; // only process u < v pairs
-            // Find common neighbors w > v (to avoid triple-counting).
-            for (std::size_t w : adj[u]) {
+        for (std::size_t v: adj[u]) {
+            if (v <= u) continue;
+            for (std::size_t w: adj[u]) {
                 if (w <= v) continue;
                 if (!hasEdge(v, w)) continue;
-                // Found triangle (u, v, w) with u < v < w.
-                triangles.push_back({u, v, w});
+
+                if (isTriangleEmpty(u, v, w)) {
+                    triangles.push_back({u, v, w});
+                }
             }
         }
     }
