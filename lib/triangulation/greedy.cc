@@ -187,10 +187,20 @@ void GreedyTriangulator::buildDCEL(const std::vector<Point2D>& points,
             std::swap(pb, pc);
         }
 
-        geometry::Triangle tri{pa, pb, pc};
+        auto cross = [](const Point2D& p1, const Point2D& p2, const Point2D& p3) {
+            return (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
+        };
+
+        constexpr double eps = -1e-9;
+
         for (std::size_t i = 0; i < n; ++i) {
             if (i == a || i == b || i == c) continue;
-            if (tri.contains(points[i])) return false;
+
+            if (cross(pa, pb, points[i]) >= eps &&
+                cross(pb, pc, points[i]) >= eps &&
+                cross(pc, pa, points[i]) >= eps) {
+                return false;
+                }
         }
         return true;
     };
