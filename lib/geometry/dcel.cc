@@ -2,7 +2,6 @@
 #include "predicates.hpp"
 
 #include <array>
-#include <cmath>
 #include <iostream>
 #include <stdexcept>
 
@@ -282,11 +281,6 @@ namespace geometry {
         // Collect the four vertices
         const VertexIdx u = halfEdges_[c0].origin; // c0: u→v
         const VertexIdx v = halfEdges_[d0].origin; // d0: v→u
-        // const VertexIdx w = halfEdges_[c1].twin;    // we need dest(c1) = origin(twin(c1))
-        // // dest(c1) = origin of twin(c1)
-        // const VertexIdx wIdx = halfEdges_[halfEdges_[c1].twin].origin;
-        // const VertexIdx xIdx = halfEdges_[halfEdges_[d1].twin].origin;
-        // (void)w; (void)wIdx; // just use directly below
 
         const VertexIdx W = halfEdges_[halfEdges_[c1].twin].origin; // w = dest(c1)
         const VertexIdx X = halfEdges_[halfEdges_[d1].twin].origin; // x = dest(d1)
@@ -294,38 +288,6 @@ namespace geometry {
         // The two faces (reuse existing face objects)
         const FaceIdx fLeft = halfEdges_[c0].face; // triangle u,v,W
         const FaceIdx fRight = halfEdges_[d0].face; // triangle v,u,X
-
-        //
-        // Rewire: after the flip
-        //   c0 becomes w→x  (was u→v)
-        //   d0 becomes x→w  (was v→u)
-        //   New triangles:
-        //     fLeft  = w, x, u   (half-edges: c0=w→x, d1=x→u... wait, see below)
-        //
-        // Standard flip rewiring (see de Berg et al. §3.2):
-        //
-        //   c0: w→x,   next=d1,  prev=c2,  face=fLeft
-        //   d0: x→w,   next=c1,  prev=d2,  face=fRight
-        //   c1: v→w,   next=c2... NO — c1 stays the same direction but changes face
-        //
-        // Let me re-derive carefully:
-        //   fLeft  gets half-edges: c0 (w→x), d1 (x→u... wait)
-        //
-        // The cleanest way: enumerate the two new triangles explicitly.
-        //
-        //   New left  triangle (w, x, u):  c0 (w→x),  d1 (x→u),  c2 (u→w)
-        //   New right triangle (x, w, v):  d0 (x→w),  c1 (w→v),  d2 (v→x)
-        //
-        // Note: dest of c1 = w (we read from halfEdges_[c1].twin.origin = W).
-        //       dest of d1 = x (halfEdges_[d1].twin.origin = X).
-        //       c2: origin=W (was u→w before? No — c2=h->prev, whose origin = W,
-        //           pointing toward u).
-        //
-        // Let me re-check: c0=h (u→v), c1=h->next (v→W), c2=h->prev (W→u).
-        //   So: c2.origin = W, c2 points W→u. ✓
-        //       d1.origin = u, d1 points u→X.
-        //       d2.origin = X, d2 points X→v.
-        //
 
         // ── Update origins of the flipped half-edges ──────────────────────────
         halfEdges_[c0].origin = W; // c0: w→x
@@ -362,20 +324,8 @@ namespace geometry {
         faces_[fRight].edge = d0;
 
         // ── Update vertex outgoing edges ──────────────────────────────────────
-        // u and v no longer have c0/d0 as valid outgoing edges — fix if needed.
-        // We reassign to a half-edge we KNOW is still correct.
-        // d1.origin == u, c1.origin == v (unchanged)
         vertices_[u].edge = d1; // u→x is still a valid outgoing edge from u
         vertices_[v].edge = d2; // v→x via d2... wait: d2.origin = X. Fix below.
-
-        // Re-derive: after flip, what edges originate from u, v, W, X?
-        //   u: d1 (u→X) — correct, d1.origin = u (unchanged)
-        //   v: c1 (v→W) — correct, c1.origin = v (unchanged), still valid
-        //   W: c0 (W→X) — c0.origin = W now
-        //   X: d0 (X→W) — d0.origin = X now
-        //
-        // Only u and v's stored .edge pointers might be stale if they were
-        // pointing to c0 or d0, which changed origin.  Safest: reassign all four.
         vertices_[u].edge = d1; // u → X
         vertices_[v].edge = c1; // v → W  (c1 origin is still v, unchanged)
         vertices_[W].edge = c0; // W → X
@@ -423,33 +373,6 @@ namespace geometry {
         // Let's be explicit:
         const FaceIdx f2 = addFace(); // triangle (p, b, c)
         const FaceIdx f3 = addFace(); // triangle (p, c, a)
-
-        //
-        // New triangles:
-        //   f1 = (p → a → b → p):  pbInner (p→b... wait
-        //
-        // Let me be explicit about each triangle in CCW order,
-        // using the original half-edges e0 (a→b), e1 (b→c), e2 (c→a).
-        //
-        //   f1 (p, a, b): p→a=paInner? No...
-        //
-        // The original face had half-edges e0:a→b, e1:b→c, e2:c→a.
-        // After split we want:
-        //   f1 (a, b, p): e0 (a→b),  bpInner (b→p),  paInner... wait, pa inner = p→a
-        //
-        // Let me name the new inner edges clearly:
-        //   ap = apInner: origin a, going toward p  (twin of pa which is p→a)
-        //   bp = bpInner: origin b, going toward p
-        //   cp = cpInner: origin c, going toward p
-        //   pa = paInner: origin p, going toward a
-        //   pb = pbInner: origin p, going toward b
-        //   pc = pcInner: origin p, going toward c
-        //
-        // Three triangles in CCW order:
-        //   f1: a → b → p → a   uses: e0(a→b), bpInner(b→p), paInner(p→a)
-        //   f2: b → c → p → b   uses: e1(b→c), cpInner(c→p), pbInner(p→b)
-        //   f3: c → a → p → c   uses: e2(c→a), apInner(a→p), pcInner(p→c)
-        //
 
         // Set origins
         halfEdges_[paInner].origin = vP;
@@ -540,8 +463,7 @@ namespace geometry {
 
         const VertexIdx u = halfEdges_[h].origin;
         const VertexIdx v = halfEdges_[ht].origin;
-        const VertexIdx w = halfEdges_[hn].twin; // dest(hn) — wrong: twin gives the he not vertex
-        // dest(hn) = origin(twin(hn))
+        const VertexIdx w = halfEdges_[hn].twin;
         const VertexIdx W = halfEdges_[halfEdges_[hn].twin].origin;
         const VertexIdx X = halfEdges_[halfEdges_[htn].twin].origin;
 
@@ -552,26 +474,14 @@ namespace geometry {
         // Insert the new vertex.
         const VertexIdx vP = addVertex(p);
 
-        // Allocate new half-edge pairs:
-        //   pair1: p→v (inner for left triangle), v→p twin
-        //   pair2: p→u (inner for right), u→p twin
-        //   (We REUSE h for u→p and ht for v→p, so we only need 2 new pairs.)
-        //
-        // Actually, the cleanest approach:
-        //   Keep  h as u→p  (just change its twin-half and next)
-        //   Keep ht as v→p  (analogously)
-        //   Add new: pv (p→v) and pu_r (p→u for right triangle)
-        //
         const HalfEdgeIdx pv = addHalfEdgePair(); // p→v (left),   v→p twin (pvt = pv+1)
         const HalfEdgeIdx pu = addHalfEdgePair(); // p→u (right),  u→p twin (put = pu+1)
 
         const HalfEdgeIdx pvInner = pv, vpInner = pv + 1;
         const HalfEdgeIdx puInner = pu, upInner = pu + 1;
 
-        // Two new faces (reuse fLeft and fRight for the "u-side" halves,
-        // create new faces for the "v-side" halves).
-        const FaceIdx fLeftV = addFace(); // new triangle (p, v, W)
-        const FaceIdx fRightV = addFace(); // new triangle (p, X, v) — actually (p, v, X... let's derive)
+        const FaceIdx fLeftV = addFace();
+        const FaceIdx fRightV = addFace();
 
         // ── Set origins ───────────────────────────────────────────────────────
         // Reuse h as u→p: origin stays u, but twin will be upInner
@@ -586,14 +496,6 @@ namespace geometry {
         halfEdges_[upInner].origin = u;
 
         // ── Left side ─────────────────────────────────────────────────────────
-        // fLeft  (u → p → W → u):   h(u→p),  a new edge p→W?
-        //
-        // Wait — hn is already v→W.  After the split, left triangle has p instead of v.
-        // So the left side becomes TWO triangles:
-        //   fLeft  (u, p, W):  h(u→p),  new(p→W),  hp(W→u)
-        //   fLeftV (p, v, W):  pvInner(p→v), hn(v→W), new(W→p)
-        //
-        // This requires a NEW half-edge pair p↔W.
         const HalfEdgeIdx pw = addHalfEdgePair(); // p→W (inner left), W→p twin
         const HalfEdgeIdx pwInner = pw, wpInner = pw + 1;
         halfEdges_[pwInner].origin = vP;
@@ -630,7 +532,6 @@ namespace geometry {
         halfEdges_[wpInner].twin = pwInner;
 
         // ── Right side ────────────────────────────────────────────────────────
-        // Similarly, add p↔X pair.
         const HalfEdgeIdx px = addHalfEdgePair(); // p→X, X→p twin
         const HalfEdgeIdx pxInner = px, xpInner = px + 1;
         halfEdges_[pxInner].origin = vP;
@@ -666,7 +567,6 @@ namespace geometry {
         halfEdges_[pxInner].twin = xpInner;
         halfEdges_[xpInner].twin = pxInner;
 
-        // h and ht are now u→p and v→p; their twins are upInner and vpInner.
         halfEdges_[upInner].twin = h;
         halfEdges_[vpInner].twin = ht;
 
@@ -686,8 +586,6 @@ namespace geometry {
         assert(fi != kOuterFace && "Cannot kill the outer face");
         assertFace(fi);
         faces_[fi].dead = true;
-        // Mark the face's half-edges as dead too so traversal skips them.
-        // TODO: ERROR FIX (DLN, QGR assertion fail here)
         HalfEdgeIdx h = faces_[fi].edge;
         if (h == kInvalidIdx) return;
         for (int i = 0; i < 3; ++i) {

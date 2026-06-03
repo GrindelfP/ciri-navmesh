@@ -97,4 +97,4 @@ def generate_labyrinth(target_n, filename="labyrinth.txt", width=100.0, height=1
 
 
 if __name__ == "__main__":
-    generate_labyrinth(target_n=800, filename="labyrinth_big.txt", width=50.0, height=50.0)
+    generate_labyrinth(target_n=800, filename="../labyrinth_big.txt", width=50.0, height=50.0)
