@@ -20,6 +20,7 @@ namespace triangulation {
 
 using geometry::DCEL;
 using geometry::FaceIdx;
+using geometry::HalfEdge;
 using geometry::HalfEdgeIdx;
 using geometry::Point2D;
 using geometry::VertexIdx;

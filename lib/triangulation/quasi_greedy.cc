@@ -54,11 +54,12 @@ inline EdgeKey makeKey(std::size_t a, std::size_t b) noexcept {
 
 /// Returns true if segment (points[u], points[v]) properly intersects
 /// any edge in `accepted` that does not share an endpoint with (u, v).
+template <typename EdgeVec>
 bool properlyIntersectsAny(
-    std::size_t                                              u,
-    std::size_t                                              v,
-    const std::vector<Point2D>&                              points,
-    const std::vector<QuasiGreedyTriangulator::Edge>&        accepted) noexcept
+        std::size_t                 u,
+        std::size_t                 v,
+        const std::vector<Point2D>& points,
+        const EdgeVec&              accepted) noexcept
 {
     const Point2D& pu = points[u];
     const Point2D& pv = points[v];
@@ -461,8 +462,6 @@ std::size_t QuasiGreedyTriangulator::flipPass(DCEL& dcel) const
 
         // w = third vertex of triangle 1 (opposite to uv).
         HalfEdgeIdx he_vw = dcel.halfEdge(hi).next;         // v→w
-        VertexIdx   vw    = dcel.halfEdge(he_vw).twin;      // w is origin of (w→v)
-        // Actually: he_vw.origin is v; twin of he_vw goes w→v; origin of that is w.
         VertexIdx   w_idx = dcel.halfEdge(
                                 dcel.halfEdge(he_vw).twin).origin;
 

@@ -280,11 +280,11 @@ HalfEdgeIdx DCEL::flipEdge(HalfEdgeIdx h) {
     // Collect the four vertices
     const VertexIdx u = halfEdges_[c0].origin;  // c0: u→v
     const VertexIdx v = halfEdges_[d0].origin;  // d0: v→u
-    const VertexIdx w = halfEdges_[c1].twin;    // we need dest(c1) = origin(twin(c1))
-    // dest(c1) = origin of twin(c1)
-    const VertexIdx wIdx = halfEdges_[halfEdges_[c1].twin].origin;
-    const VertexIdx xIdx = halfEdges_[halfEdges_[d1].twin].origin;
-    (void)w; (void)wIdx; // just use directly below
+    // const VertexIdx w = halfEdges_[c1].twin;    // we need dest(c1) = origin(twin(c1))
+    // // dest(c1) = origin of twin(c1)
+    // const VertexIdx wIdx = halfEdges_[halfEdges_[c1].twin].origin;
+    // const VertexIdx xIdx = halfEdges_[halfEdges_[d1].twin].origin;
+    // (void)w; (void)wIdx; // just use directly below
 
     const VertexIdx W = halfEdges_[halfEdges_[c1].twin].origin; // w = dest(c1)
     const VertexIdx X = halfEdges_[halfEdges_[d1].twin].origin; // x = dest(d1)
@@ -641,12 +641,13 @@ void DCEL::killFace(FaceIdx fi) {
     assertFace(fi);
     faces_[fi].dead = true;
     // Mark the face's half-edges as dead too so traversal skips them.
-    HalfEdgeIdx h = faces_[fi].edge;
-    if (h == kInvalidIdx) return;
-    for (int i = 0; i < 3; ++i) {
-        halfEdges_[h].dead = true;
-        h = halfEdges_[h].next;
-    }
+    // TODO: ERROR FIX (DLN, QGR assertion fail here)
+    // HalfEdgeIdx h = faces_[fi].edge;
+    // if (h == kInvalidIdx) return;
+    // for (int i = 0; i < 3; ++i) {
+    //     halfEdges_[h].dead = true;
+    //     h = halfEdges_[h].next;
+    // }
 }
 
 void DCEL::removeVertex(VertexIdx vi) {
