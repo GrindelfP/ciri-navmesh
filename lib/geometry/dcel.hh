@@ -460,6 +460,10 @@ public:
      */
     [[nodiscard]] double totalWeight() const noexcept;
 
+    bool isHalfEdgeLive(HalfEdgeIdx i) const noexcept {
+        return i < halfEdges_.size() && !halfEdges_[i].dead;
+    }
+
 private:
     std::vector<Vertex>   vertices_;
     std::vector<HalfEdge> halfEdges_;
