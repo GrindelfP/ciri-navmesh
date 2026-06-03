@@ -531,12 +531,14 @@ namespace triangulation {
                 // Sanity check: flipping must produce a valid (non-degenerate)
                 // quadrilateral.  The new edge w-x must lie inside the quad,
                 // i.e. w and x must be on opposite sides of line u-v.
-                auto owx = pred::orientation(pu, pv, pw);
-                auto oxv = pred::orientation(pu, pv, px);
-                if (owx == pred::Orientation::Collinear ||
-                    oxv == pred::Orientation::Collinear)
+                auto ou = pred::orientation(pw, px, pu);
+                auto ov = pred::orientation(pw, px, pv);
+
+                if (ou == pred::Orientation::Collinear ||
+                    ov == pred::Orientation::Collinear)
                     continue;
-                if (owx == oxv) continue; // same side — non-convex quad, skip
+
+                if (ou == ov) continue; // same side — non-convex quad, skip
 
                 dcel.flipEdge(hi);
                 ++flips;
