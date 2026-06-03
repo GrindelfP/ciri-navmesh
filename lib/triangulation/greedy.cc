@@ -93,24 +93,50 @@ GreedyTriangulator::buildCandidates(const std::vector<Point2D>& points) const
 // ─────────────────────────────────────────────────────────────────────────────
 //  properlyIntersectsAny
 // ─────────────────────────────────────────────────────────────────────────────
-
+template<typename EdgeVec>
 bool GreedyTriangulator::properlyIntersectsAny(
-    std::size_t                 u,
-    std::size_t                 v,
-    const std::vector<Point2D>& points,
-    const std::vector<Edge>&    accepted) const
-{
-    const Point2D& pu = points[u];
-    const Point2D& pv = points[v];
+    std::size_t u,
+    std::size_t v,
+    const std::vector<Point2D> &points,
+    const EdgeVec &accepted) noexcept {
 
-    for (const Edge& e : accepted) {
-        // Shared endpoint → not a proper intersection; skip.
-        if (e.u == u || e.u == v || e.v == u || e.v == v) continue;
+    const Point2D &pu = points[u];
+    const Point2D &pv = points[v];
 
-        auto type = pred::segmentIntersect(pu, pv, points[e.u], points[e.v]);
-        if (type == pred::IntersectionType::Proper) return true;
-        // Overlap: two collinear edges — also reject.
-        if (type == pred::IntersectionType::Overlap) return true;
+    auto isPointStrictlyOnSegment = [](const Point2D& p, const Point2D& a, const Point2D& b) {
+        double cross = (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
+        if (std::abs(cross) > 1e-9) return false;
+
+        return p.x >= std::min(a.x, b.x) && p.x <= std::max(a.x, b.x) &&
+               p.y >= std::min(a.y, b.y) && p.y <= std::max(a.y, b.y) &&
+               !(std::abs(p.x - a.x) < 1e-9 && std::abs(p.y - a.y) < 1e-9) &&
+               !(std::abs(p.x - b.x) < 1e-9 && std::abs(p.y - b.y) < 1e-9);
+    };
+
+    for (const auto &e : accepted) {
+        if (e.u == u || e.u == v || e.v == u || e.v == v) {
+            std::size_t shared = (e.u == u || e.u == v) ? e.u : e.v;
+            std::size_t otherAccepted = (e.u == shared) ? e.v : e.u;
+            std::size_t otherCurrent = (u == shared) ? v : u;
+
+            if (isPointStrictlyOnSegment(points[otherAccepted], pu, pv) ||
+                isPointStrictlyOnSegment(points[otherCurrent], points[e.u], points[e.v])) {
+                return true;
+            }
+            continue;
+        }
+
+        auto t = pred::segmentIntersect(pu, pv, points[e.u], points[e.v]);
+        if (t != pred::IntersectionType::None) {
+            return true;
+        }
+
+        if (isPointStrictlyOnSegment(points[e.u], pu, pv) ||
+            isPointStrictlyOnSegment(points[e.v], pu, pv) ||
+            isPointStrictlyOnSegment(pu, points[e.u], points[e.v]) ||
+            isPointStrictlyOnSegment(pv, points[e.u], points[e.v])) {
+            return true;
+        }
     }
     return false;
 }

@@ -115,6 +115,8 @@ private:
     std::vector<Edge>
     buildCandidates(const std::vector<geometry::Point2D>& points) const;
 
+
+
     /**
      * @brief Tests whether segment (points[u], points[v]) properly intersects
      *        any edge in @p accepted.
@@ -128,11 +130,9 @@ private:
      * @param accepted Already-accepted edges.
      * @return         true if a proper intersection exists (reject candidate).
      */
-    bool properlyIntersectsAny(
-        std::size_t                           u,
-        std::size_t                           v,
-        const std::vector<geometry::Point2D>& points,
-        const std::vector<Edge>&              accepted) const;
+    template<class EdgeVec>
+    bool properlyIntersectsAny(std::size_t u, std::size_t v, const std::vector<geometry::Point2D> &points,
+                               const EdgeVec &accepted) noexcept;
 
     /**
      * @brief Builds a DCEL from the accepted triangulation edge set.
