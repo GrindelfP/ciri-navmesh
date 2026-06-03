@@ -44,7 +44,6 @@ namespace triangulation {
         dcel.reserve(points.size() + 3, 2 * points.size() + 1);
 
         // Sort input by x (tie-break y) for better insertion locality.
-        // We work on a local sorted copy; caller's order is unaffected.
         std::vector<Point2D> sorted(points.begin(), points.end());
         std::sort(sorted.begin(), sorted.end());
         // Remove consecutive exact duplicates (robustness).
@@ -57,7 +56,7 @@ namespace triangulation {
 
         auto t0 = std::chrono::steady_clock::now();
 
-        // Step 1: super-triangle.
+        // Step 1: super-triangle
         auto superVerts = buildSuperTriangle(sorted, dcel);
 
         // Step 2: incremental insertion.
@@ -65,10 +64,83 @@ namespace triangulation {
             insertPoint(p, dcel);
         }
 
-        // Step 3: remove super-triangle vertices (kills all incident faces).
-        // Remove in reverse order to avoid dangling references during removal.
-        for (int i = 2; i >= 0; --i) {
-            dcel.removeVertex(superVerts[static_cast<std::size_t>(i)]);
+        // Step 3: Extract valid triangles and rebuild DCEL cleanly
+        struct TriIdx { VertexIdx a, b, c; };
+        std::vector<TriIdx> validTris;
+        validTris.reserve(dcel.faceCount());
+
+        std::vector<VertexIdx> sortedToOrig(sorted.size());
+        for (std::size_t i = 0; i < sorted.size(); ++i) {
+            for (std::size_t j = 0; j < points.size(); ++j) {
+                if (sorted[i].nearlyEqual(points[j])) {
+                    sortedToOrig[i] = static_cast<VertexIdx>(j);
+                    break;
+                }
+            }
+        }
+
+        for (FaceIdx fi = 1; fi < dcel.faceCount(); ++fi) {
+            if (dcel.face(fi).dead) continue;
+            auto [va, vb, vc] = dcel.faceVertices(fi);
+
+            if (va == superVerts[0] || va == superVerts[1] || va == superVerts[2] ||
+                vb == superVerts[0] || vb == superVerts[1] || vb == superVerts[2] ||
+                vc == superVerts[0] || vc == superVerts[1] || vc == superVerts[2]) {
+                continue;
+            }
+
+            validTris.push_back({sortedToOrig[va - 3],
+                                 sortedToOrig[vb - 3],
+                                 sortedToOrig[vc - 3]});
+        }
+
+        dcel.clear();
+        dcel.reserve(points.size(), validTris.size() * 3);
+
+        for (const auto& p : points) {
+            dcel.addVertex(p);
+        }
+
+        struct EdgeKey {
+            std::size_t lo, hi;
+            bool operator==(const EdgeKey& o) const noexcept { return lo == o.lo && hi == o.hi; }
+        };
+        struct EdgeKeyHash {
+            std::size_t operator()(const EdgeKey& k) const noexcept {
+                return std::hash<std::size_t>{}(k.lo) ^ (std::hash<std::size_t>{}(k.hi) * 0x9e3779b9u);
+            }
+        };
+
+        std::unordered_map<EdgeKey, HalfEdgeIdx, EdgeKeyHash> heMap;
+        heMap.reserve(validTris.size() * 3);
+
+        for (const auto& tri : validTris) {
+            FaceIdx fi = dcel.addTriangle(tri.a, tri.b, tri.c);
+            auto [h0, h1, h2] = dcel.faceHalfEdges(fi);
+
+            auto storeHE = [&](HalfEdgeIdx h, VertexIdx src, VertexIdx dst) {
+                heMap[{static_cast<std::size_t>(src), static_cast<std::size_t>(dst)}] = h;
+            };
+            storeHE(h0, tri.a, tri.b);
+            storeHE(h1, tri.b, tri.c);
+            storeHE(h2, tri.c, tri.a);
+        }
+
+        std::unordered_set<HalfEdgeIdx> stitched;
+        stitched.reserve(heMap.size());
+
+        for (auto& [key, h] : heMap) {
+            if (stitched.count(h)) continue;
+            EdgeKey revKey{key.hi, key.lo};
+            auto it = heMap.find(revKey);
+            if (it != heMap.end()) {
+                HalfEdgeIdx twinH = it->second;
+                if (!stitched.count(twinH)) {
+                    dcel.stitchTwins(h, twinH);
+                    stitched.insert(h);
+                    stitched.insert(twinH);
+                }
+            }
         }
 
         auto t1 = std::chrono::steady_clock::now();
@@ -77,8 +149,7 @@ namespace triangulation {
         res.elapsed = t1 - t0;
         res.totalWeight = dcel.totalWeight();
         res.triangleCount = dcel.liveTriangleCount();
-        res.flipCount = 0; // BW does no explicit flips; Delaunay is maintained
-        // structurally via cavity re-triangulation.
+        res.flipCount = 0;
         return res;
     }
 
