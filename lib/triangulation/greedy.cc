@@ -179,10 +179,17 @@ void GreedyTriangulator::buildDCEL(const std::vector<Point2D>& points,
     };
 
     auto isTriangleEmpty = [&](std::size_t a, std::size_t b, std::size_t c) {
-        geometry::Triangle tri{points[a], points[b], points[c]};
+        auto pa = points[a];
+        auto pb = points[b];
+        auto pc = points[c];
+
+        if (!pred::isCCW(pa, pb, pc)) {
+            std::swap(pb, pc);
+        }
+
+        geometry::Triangle tri{pa, pb, pc};
         for (std::size_t i = 0; i < n; ++i) {
             if (i == a || i == b || i == c) continue;
-            // Если точка i лежит внутри треугольника abc, грань не атомарна
             if (tri.contains(points[i])) return false;
         }
         return true;

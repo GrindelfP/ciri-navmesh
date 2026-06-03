@@ -315,9 +315,14 @@ static RunMetrics runOne(triangulation::ITriangulator&         triangulator,
  */
 static void printTable(const std::vector<RunMetrics>& results,
                        std::ostream&                  os = std::cout) {
-    // Column widths
-    constexpr int W0 = 26, W1 = 11, W2 = 13, W3 = 12, W4 = 9, W5 = 7;
-    const std::string sep(W0+W1+W2+W3+W4+W5+5*3, '-');
+    int W0 = 22;
+    for (const auto& r : results) {
+        W0 = std::max(W0, static_cast<int>(r.algoName.length()));
+    }
+
+    constexpr int W1 = 11, W2 = 13, W3 = 12, W4 = 9, W5 = 7;
+
+    std::string sep(W0 + W1 + W2 + W3 + W4 + W5 + 5 * 3 + 2, '-');
 
     auto cell = [&](const std::string& s, int w) {
         os << " " << std::left << std::setw(w) << s << " |";
@@ -338,7 +343,7 @@ static void printTable(const std::vector<RunMetrics>& results,
         cell(w.str(), W2);
 
         std::ostringstream b;
-        b << std::fixed << std::setprecision(1) << r.tri.elapsed.count()*1000.0;
+        b << std::fixed << std::setprecision(1) << r.tri.elapsed.count() * 1000.0;
         cell(b.str(), W3);
 
         if (r.pathFound) {
