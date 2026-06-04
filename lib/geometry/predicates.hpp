@@ -14,8 +14,7 @@
 
 #include "primitives.hpp"
 
-namespace geometry {
-namespace predicates {
+namespace geometry::predicates {
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Orientation
@@ -217,7 +216,6 @@ enum class IntersectionType {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Дополнительные предикаты
 // ─────────────────────────────────────────────────────────────────────────────
-
 /**
  * @brief Проверяет, лежит ли точка @p p на отрезке @p a – @p b.
  *
@@ -269,5 +267,5 @@ enum class IntersectionType {
                                       const Point2D& s,
                                       double eps = kEps) noexcept;
 
-} // namespace predicates
-} // namespace geometry
+} // namespace geometry::predicates
+

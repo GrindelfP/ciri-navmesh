@@ -41,7 +41,6 @@
 #include "../navmesh/navmesh.hh"
 #include "../geometry/primitives.hpp"
 
-#include <optional>
 #include <vector>
 
 namespace pathfinding {
