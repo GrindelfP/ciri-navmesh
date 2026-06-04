@@ -4,6 +4,7 @@
 #include <array>
 #include <iostream>
 #include <stdexcept>
+#include <cassert>
 
 namespace geometry {
     // ─────────────────────────────────────────────────────────────────────────────

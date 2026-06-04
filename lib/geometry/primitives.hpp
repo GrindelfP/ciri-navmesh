@@ -3,6 +3,7 @@
 #include <cmath>
 #include <functional>
 #include <ostream>
+#include <algorithm>
 
 namespace geometry {
     // ─────────────────────────────────────────────────────────────────────────────
