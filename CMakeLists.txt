@@ -57,3 +57,61 @@ add_executable(navmesh_vis
 )
 target_include_directories(navmesh_vis PRIVATE app lib)
 target_link_libraries(navmesh_vis PRIVATE navmesh_algo)
+
+# ── Application: navmesh_interactive  (SDL2 interactive viewer) ───────────────
+#
+# Requires SDL2 and SDL2_ttf. Install on macOS M1:
+#   brew install sdl2 sdl2_ttf
+#
+find_package(SDL2 QUIET)
+
+if(SDL2_FOUND OR TARGET SDL2::SDL2)
+
+    # --- SDL2_ttf: try CMake config first, then pkg-config -------------------
+    find_package(SDL2_ttf QUIET)
+    if(NOT SDL2_ttf_FOUND AND NOT TARGET SDL2_ttf::SDL2_ttf)
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(SDL2_TTF IMPORTED_TARGET SDL2_ttf)
+        endif()
+    endif()
+
+    add_executable(navmesh_interactive
+            app/interactive_main.cc
+    )
+    target_include_directories(navmesh_interactive PRIVATE app lib)
+    target_include_directories(navmesh_interactive PRIVATE /opt/homebrew/include)
+    target_link_libraries(navmesh_interactive PRIVATE navmesh_algo SDL2::SDL2)
+
+    # Link SDL2_ttf via whichever discovery method worked
+    if(TARGET SDL2_ttf::SDL2_ttf)
+        target_link_libraries(navmesh_interactive PRIVATE SDL2_ttf::SDL2_ttf)
+        message(STATUS "SDL2_ttf found via CMake config")
+    elseif(TARGET PkgConfig::SDL2_TTF)
+        target_link_libraries(navmesh_interactive PRIVATE PkgConfig::SDL2_TTF)
+        message(STATUS "SDL2_ttf found via pkg-config")
+    else()
+        message(WARNING
+            "SDL2_ttf not found — text labels will be absent. "
+            "Install with: brew install sdl2_ttf")
+        target_compile_definitions(navmesh_interactive PRIVATE SDL_NO_TTF_AVAILABLE)
+    endif()
+
+    # macOS needs several system frameworks that SDL2 depends on
+    if(APPLE)
+        target_link_libraries(navmesh_interactive PRIVATE
+            "-framework Cocoa"
+            "-framework IOKit"
+            "-framework CoreVideo"
+            "-framework CoreAudio"
+            "-framework AudioToolbox"
+        )
+    endif()
+
+    message(STATUS "navmesh_interactive target enabled (SDL2 found)")
+
+else()
+    message(WARNING
+        "SDL2 not found — navmesh_interactive will NOT be built.\n"
+        "To enable: brew install sdl2 sdl2_ttf")
+endif()
